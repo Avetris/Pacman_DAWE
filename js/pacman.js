@@ -550,6 +550,7 @@ var GF = function(){
 		HIT_GHOST : 2,
 		GAME_OVER : 3,
 		WAIT_TO_START: 4,
+		PAUSE: 5,
 		modeTimer: 0,
 		lifes: 3,
 		points: 0,
@@ -624,8 +625,6 @@ var GF = function(){
 	      		inputStates.up = false;
 	      		inputStates.right = false;
 			}
-	    }else if(inputStates.space){
-	      console.log("Spacio");
 	    }
 	};
 
@@ -695,53 +694,60 @@ var GF = function(){
     var mainLoop = function(time){
         //main function, called each frame 
         measureFPS(time);
+        if(thisGame.mode == thisGame.PAUSE){
+		    // Clear the canvas
+	        clearCanvas();
+			thisLevel.drawMap();
+			displayScore();
+        }else{
+	        if(thisGame.mode == thisGame.NORMAL){
 
-        if(thisGame.mode == thisGame.NORMAL){
+				checkInputs();
 
-			checkInputs();
+				player.move();
+				
+		    }else if(thisGame.mode == thisGame.HIT_GHOST){
+		    		player.spriteActual.update(24);
+		    	if(thisGame.modeTimer >= 90){
+		    		thisGame.lifes--;	    		
+		    		reset();
+		    		if(thisGame.lifes == 0){
+		    			thisGame.setMode(thisGame.GAME_OVER);
+		    		}
+		    	}
 
-			player.move();
-			
-	    }else if(thisGame.mode == thisGame.HIT_GHOST){
-	    		player.spriteActual.update(24);
-	    	if(thisGame.modeTimer >= 90){
-	    		thisGame.lifes--;	    		
-	    		reset();
-	    		if(thisGame.lifes == 0){
-	    			thisGame.setMode(thisGame.GAME_OVER);
-	    		}
-	    	}
+		    }
+		    if(thisGame.mode == thisGame.WAIT_TO_START){
+		    	player.movimientoActual = 1;
+				siren.pause();
+		    	if(!ready.playing())ready.play();
+		    	if(thisGame.modeTimer >= 250){
+		    		thisGame.setMode(thisGame.NORMAL);
+					siren.play();
+		    	}
+		    }else{
+		    	 // Mover fantasmas
+				for (var i=0; i< numGhosts; i++){
+					ghosts[i].move();
+				}
+		    }
+		    // Clear the canvas
+	        clearCanvas();
 
-	    }
-	    if(thisGame.mode == thisGame.WAIT_TO_START){
-	    	player.movimientoActual = 1;
-			siren.pause();
-	    	if(!ready.playing())ready.play();
-	    	if(thisGame.modeTimer >= 250){
-	    		thisGame.setMode(thisGame.NORMAL);
-				siren.play();
-	    	}
-	    }else{
-	    	 // Mover fantasmas
+	   
+			thisLevel.drawMap();
+		    // Pintar fantasmas
 			for (var i=0; i< numGhosts; i++){
-				ghosts[i].move();
+				ghosts[i].draw();
 			}
-	    }
+	 
+			player.draw();
 
-	    // Clear the canvas
-        clearCanvas();
-   
-		thisLevel.drawMap();
-	    // Pintar fantasmas
-		for (var i=0; i< numGhosts; i++){
-			ghosts[i].draw();
-		}
- 
-		player.draw();
+			displayScore();
+	 
+			updateTimers();
 
-		displayScore();
- 
-		updateTimers();
+	    }	    
         // call the animation loop every 1/60th of second
         requestAnimationFrame(mainLoop);
     };
@@ -766,8 +772,15 @@ var GF = function(){
 			   		case 40:
 			   			inputStates.down = true;
 			   			break;
-			   		case 32:
-			   			inputStates.space = true;
+			   		case 80:
+			   			if(thisGame.mode == thisGame.PAUSE){
+						    thisGame.mode = thisGame.lastMode;
+						    siren.play();
+			   			}else if(thisGame.mode != thisGame.WAIT_TO_START){
+					      thisGame.lastMode = thisGame.mode;
+					      thisGame.mode = thisGame.PAUSE;	
+						    siren.pause();		   				
+			   			}
 			   			break;
 			   }
 			}
@@ -789,9 +802,6 @@ var GF = function(){
 			   		case 83:
 			   		case 40:
 			   			inputStates.down = false;
-			   			break;
-			   		case 32:
-			   			inputStates.space = false;
 			   			break;
 			   }
 			}
